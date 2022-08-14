@@ -1,0 +1,11 @@
+{{ range .Site.Params.custom_js -}}
+    <script src="{{ . }}"></script>
+{{- end }}
+{{ with .Site.Params.umami -}}
+<script
+async
+defer
+data-website-id={{ site.Params.umami }}
+src="{{ site.Params.umamiUrl }}"
+></script>
+{{- end }}
