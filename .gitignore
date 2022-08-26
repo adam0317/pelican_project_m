@@ -2,3 +2,9 @@ content
 public
 staging
 seoad_builds
+env
+campaigns
+kw_lists
+__pycache__
+.env
+spun_articles
