@@ -19,6 +19,10 @@ def get_ready_to_build_records():
     x = build_table.get_all(view='Ready To Build')
     return x
 
+def get_records_to_add_to_cloudflare():
+    x = build_table.get_all(view='Add To Cloudflare')
+    return x
+
 def get_ready_to_deploy_records():
     x = build_table.get_all(view='Ready To Deploy')
     return x

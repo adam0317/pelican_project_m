@@ -1,4 +1,9 @@
 <?php
+require 'vendor/autoload.php';
+
+use League\HTMLToMarkdown\HtmlConverter;
+
+$converter = new HtmlConverter();
 
 $csvFilePath = $argv[1];
 $articleDir = $argv[2];
@@ -112,7 +117,7 @@ while (!feof($file)) {
 
     $text = file_get_contents($articleDir . '/' . $input[$rand_keys]);
     $keyword = fgetcsv($file)[0];
-    $myfile = fopen("$articleDst/$keyword.html", "w") or die("Unable to open file!");
+    $myfile = fopen("$articleDst/$keyword.md", "w") or die("Unable to open file!");
     $spun_doc = Spintax::parse($text);
     // $doc = new DOMDocument();
     // @$doc->loadHTML($text);
@@ -129,9 +134,10 @@ while (!feof($file)) {
     // fwrite($myfile, "  alt: \n");
     fwrite($myfile, "date: " . $post_date . "\n");
     fwrite($myfile, "draft: false\n");
-    fwrite($myfile, "keywords:[' " . $keyword . "']\n");
+    fwrite($myfile, "keywords: ['" . $keyword . "']\n");
     fwrite($myfile, "---\n\n");
-    fwrite($myfile, $spun_doc);
+    $mydoc = $converter->convert($spun_doc);
+    fwrite($myfile, $mydoc);
     fclose($myfile);
 }
 fclose($file);
@@ -140,4 +146,4 @@ $end_time = microtime(true);
 $execution_time = ($end_time - $start_time);
 
 
-echo " Execution time of script = " . $execution_time . " sec";
+echo " Execution time of script = " . $execution_time . " sec\n";

@@ -8,3 +8,5 @@ kw_lists
 __pycache__
 .env
 spun_articles
+vendor
+hugo_build_folder/.DS_Store
