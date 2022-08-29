@@ -1,9 +1,9 @@
 <?php
-require 'vendor/autoload.php';
+// require 'vendor/autoload.php';
 
-use League\HTMLToMarkdown\HtmlConverter;
+// use League\HTMLToMarkdown\HtmlConverter;
 
-$converter = new HtmlConverter();
+// $converter = new HtmlConverter();
 
 $csvFilePath = $argv[1];
 $articleDir = $argv[2];
@@ -136,8 +136,8 @@ while (!feof($file)) {
     fwrite($myfile, "draft: false\n");
     fwrite($myfile, "keywords: ['" . $keyword . "']\n");
     fwrite($myfile, "---\n\n");
-    $mydoc = $converter->convert($spun_doc);
-    fwrite($myfile, $mydoc);
+    // $mydoc = $converter->convert($spun_doc);
+    fwrite($myfile, $spun_doc);
     fclose($myfile);
 }
 fclose($file);

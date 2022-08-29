@@ -241,13 +241,14 @@ def create_bucket(bucket_name):
 def deploy_sites():
     sites = get_ready_to_deploy_records()
     for record in sites:
-        date_time = datetime.datetime.now().strftime("%m/%d/%Y")
+        date_time = datetime.now().strftime("%m/%d/%Y")
         domain_type = 'Root'
         site = record['fields']
         domain = site['Base Domain']
         print(f"Deploying {domain} {date_time}")
+        update_record(record['id'], {'Status': 'Deploying'})
         subprocess.Popen(
-            f"./deploy.sh {domain}", shell=True).wait()
+            f"./hugo_deploy.sh {domain}", shell=True).wait()
 
         live_site_record = {
             'Domain': site['Bucket Name'],
@@ -269,7 +270,7 @@ def deploy_sites():
 
 
 if __name__ == "__main__":
-    
+
     handle_dns()
     build_sites()
-    # deploy_sites()
+    deploy_sites()
