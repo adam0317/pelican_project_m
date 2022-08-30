@@ -6,6 +6,7 @@ from time import sleep
 import boto3
 import json
 import subprocess
+import requests
 from dotenv import load_dotenv
 from spin_rw import spin_article
 from datetime import datetime
@@ -83,12 +84,23 @@ def build_sites():  # sourcery no-metrics
             os.makedirs(spun_article_dir)
             # Get an article from article_forge
 
-            continue
-        elif len(os.listdir(spun_article_dir)) == 0:
+            
+        if len(os.listdir(spun_article_dir)) == 0:
             print('*' * 80)
-            print(f'No Article Found For {domain}')
+            print(f'No Local Article Found For {domain}')
             print('*' * 80)
-            continue
+            articles = site['article_file']
+            if not articles:
+                print(f'No Remote Article File Found For {domain}')
+                print('*' * 80)
+                continue
+            for article in articles:
+                
+                content = requests.get(article['url'])
+                with open(f"{spun_article_dir}/{article['filename']}", 'w') as f:
+                    f.write(content.text)
+            print(site)
+            
 
         build_dir = create_hugo_directory(domain)
 
