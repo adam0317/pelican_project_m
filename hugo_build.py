@@ -23,11 +23,13 @@ load_dotenv()
 yaml = YAML()
 current_working_dir = os.getcwd()
 HUGO_BUILD_PATH = f"{os.getcwd()}/hugo_build_folder"
-STAGING_PATH = os.getenv('STAGING_PATH', '../staging')
+STAGING_PATH = os.getenv('STAGING_PATH', './staging')
 HUGO_TEMPLATE_DIR = f'{os.path.join(current_working_dir, "hugo_template_site")}'
 WASABI_ACCESS_KEY_ID = os.getenv('WASABI_ACCESS_KEY')
 WASABI_SECRET_ACCESS_KEY = os.getenv('WASABI_SECRET_KEY')
 
+if not os.path.exists(STAGING_PATH):
+    os.makedirs(STAGING_PATH)
 
 def send_article_to_spin_rewriter(keyword):
     article_to_spin = f"./new_articles/{keyword}.txt"
@@ -65,9 +67,12 @@ def build_sites():  # sourcery no-metrics
             df.to_csv(
                 f"{os.getcwd()}/kw_lists/{site['csv_file'][0]['filename']}", index=False)
         kw_list_path = f"{os.getcwd()}/kw_lists/{site['csv_file'][0]['filename']}"
-        print(f"Starting Full Build {site['Bucket Name']}")
         if 'Test' not in site['Status']:
+            print(f"Starting Full Build {site['Bucket Name']}")
             update_record(record['id'], {'Status': 'In progress'})
+        else:
+            print(f"Starting Test Build {site['Bucket Name']}")
+
 
         spun_article_dir = f"{os.getcwd()}/spun_articles/{site['Article'][0].lower()}"
 
@@ -75,6 +80,7 @@ def build_sites():  # sourcery no-metrics
             print('*' * 80)
             print(f'No Article Directory Found For {domain}')
             print('*' * 80)
+            os.makedirs(spun_article_dir)
             # Get an article from article_forge
 
             continue
@@ -92,8 +98,13 @@ def build_sites():  # sourcery no-metrics
 
         subprocess.Popen(
             f"./hugo_build.sh {domain} {STAGING_PATH} {build_dir}", shell=True).wait()
+        if 'Test' not in site['Status']:
+            print(f"Finished Full Build {site['Bucket Name']}")
 
-        update_record(record['id'], {'Status': 'Ready To Deploy'})
+            update_record(record['id'], {'Status': 'Ready To Deploy'})
+        else:
+            print(f"Finished Test Build {site['Bucket Name']}")
+
 
         # Article Forge Integration
         # upload zip to backup s3 bucket
@@ -270,7 +281,15 @@ def deploy_sites():
 
 
 if __name__ == "__main__":
-
-    handle_dns()
-    build_sites()
-    deploy_sites()
+    build_step = input('Choose a build step: \n1. dns\n2. build sites\n3. deploy_sites\n4. full run\n')
+    print(build_step)
+    if build_step == str(1):
+        handle_dns()
+    if build_step == str(2):
+        build_sites()
+    if build_step == str(3):
+        deploy_sites()
+    if build_step == str(4):
+        handle_dns()
+        build_sites()
+        deploy_sites()

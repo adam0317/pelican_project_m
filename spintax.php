@@ -117,7 +117,7 @@ while (!feof($file)) {
 
     $text = file_get_contents($articleDir . '/' . $input[$rand_keys]);
     $keyword = fgetcsv($file)[0];
-    $myfile = fopen("$articleDst/$keyword.md", "w") or die("Unable to open file!");
+    $myfile = fopen("$articleDst/$keyword.html", "w") or die("Unable to open file!");
     $spun_doc = Spintax::parse($text);
     // $doc = new DOMDocument();
     // @$doc->loadHTML($text);
