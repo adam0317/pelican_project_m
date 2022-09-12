@@ -8,8 +8,9 @@
 $csvFilePath = $argv[1];
 $articleDir = $argv[2];
 $articleDst = $argv[3];
-if ($argv[4]) {
-    $start_date = strtotime($argv[4]);
+$numPosts = $argv[4];
+if ($argv[5]) {
+    $start_date = strtotime($argv[5]);
 } else {
     $start_date = strtotime('2020-01-01');
 }
@@ -107,25 +108,24 @@ if (!is_dir($articleDst)) {
 $input = array_diff(scandir($articleDir), array('..', '.'));;
 $start_time = microtime(true);
 
+
 // Read CSV file
 $file = fopen($csvFilePath, "r");
+$row = 1;
+// Skips the header row
+fgetcsv($file);
+
 while (!feof($file)) {
     $timestamp = mt_rand($start_date, $end_date);
-
     $post_date =  date('Y-m-d', $timestamp);
     $rand_keys = array_rand($input);
 
     $text = file_get_contents($articleDir . '/' . $input[$rand_keys]);
     $keyword = fgetcsv($file)[0];
-    $myfile = fopen("$articleDst/$keyword.html", "w") or die("Unable to open file!");
+    $slug = slugify($keyword);
+    $myfile = fopen("$articleDst/$slug.html", "w") or die("Unable to open file!");
     $spun_doc = Spintax::parse($text);
-    // $doc = new DOMDocument();
-    // @$doc->loadHTML($text);
-
-    // $tags = $doc->getElementsByTagName('img');
-    // foreach ($tags as $tag) {
-    //     echo $tag->getAttribute('src');
-    // }
+ 
     fwrite($myfile, "---\n");
     fwrite($myfile, "title: " . $keyword . "\n");
     // fwrite($myfile, "cover:\n");
@@ -139,11 +139,19 @@ while (!feof($file)) {
     // $mydoc = $converter->convert($spun_doc);
     fwrite($myfile, $spun_doc);
     fclose($myfile);
+    if ($numPosts > 0) {
+        ++$row;
+        if ($row > $numPosts) break;
+    }
 }
 fclose($file);
 
 $end_time = microtime(true);
 $execution_time = ($end_time - $start_time);
+function slugify ($title){
+    return strtolower(trim(preg_replace('/[^A-Za-z0-9-]+/', '-', $title), '-'));
+}
+
 
 
 echo " Execution time of script = " . $execution_time . " sec\n";

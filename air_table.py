@@ -1,6 +1,8 @@
 import os
 from airtable import Airtable
 from dotenv import load_dotenv
+import ssl
+ssl._create_default_https_context = ssl._create_unverified_context
 load_dotenv()
 
 AIR_TABLE_API_KEY = os.getenv('AIR_TABLE_API_KEY')
@@ -58,7 +60,36 @@ def add_new_record(record, table='Live Sites'):
     return new_record
 
 if __name__ == '__main__':
-    # get_ready_to_build_records()
+    import pandas as pd
+    import requests
+    sites = get_ready_to_build_records()
+    for record in sites:
+        site = record['fields']
+        kw_list_exists = False
+        kw_urls = []
+        domain = site['Base Domain']
+        print(site)
+        spun_article_dir = f"{os.getcwd()}/spun_articles/{site['Article Name'][0].lower()}"
+        print(spun_article_dir)
+        if not os.path.exists(spun_article_dir):
+            print('*' * 80)
+            print(f'No Article Directory Found For ')
+            print('*' * 80)
+            os.makedirs(spun_article_dir)
+        if len(os.listdir(spun_article_dir)) == 0:
+            print('*' * 80)
+            print(f'No Local Article Found For {domain}')
+            print('*' * 80)
+            articles = site['article_file']
+            if not articles:
+                print(f'No Remote Article File Found For {domain}')
+                print('*' * 80)
+                continue
+            for article in articles:
+                
+                content = requests.get(article['url'])
+                with open(f"{spun_article_dir}/{article['filename']}", 'w') as f:
+                    f.write(content.text)
     pass
 # update_record('recthzunpCHtplft2', {'Status': 'Do Not Build'})
 # add_live_site(site)

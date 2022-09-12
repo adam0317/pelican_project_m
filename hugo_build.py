@@ -54,20 +54,33 @@ def build_sites():  # sourcery no-metrics
 
     for record in sites:
         site = record['fields']
-        start_date = site['start_date']
+        start_date = site.get('start_date', None)
         domain = site['Base Domain']
 
         kw_list_exists = False
+        kw_urls = []
         for i in site['Keyword Lists']:
             kw_list_exists = os.path.exists(f'{os.getcwd()}/kw_lists/{i}.csv')
+            # kw_urls.append(
             if kw_list_exists:
                 break
         if not kw_list_exists:
-            print('No KW List Found')
-            df = pd.read_csv(f"{site['csv_file'][0]['url']}")
-            df.to_csv(
-                f"{os.getcwd()}/kw_lists/{site['csv_file'][0]['filename']}", index=False)
-        kw_list_path = f"{os.getcwd()}/kw_lists/{site['csv_file'][0]['filename']}"
+            for i in site['csv_file']:
+                kw_urls.append(i['url'])
+            df = pd.concat([pd.read_csv(f) for f in kw_urls])
+            spec_chars = ["!",'"',"#","%","&","'","(",")",
+              "*","+",",","-",".","/",":",";","<",
+              "=",">","?","@","[","\\","]","^","_",
+              "`","{","|","}","~","–","$",".",","]
+
+            a = '/^[A-Za-z][A-Za-z0-9]*$/'
+            for char in spec_chars:
+                df['Keyword'] = df['Keyword'].str.replace(char, '')
+            df['Keyword'] = df['Keyword'].str.split().str.join(" ")
+
+            combined_csv = df['Keyword'].str.title()
+            combined_csv.to_csv(f"{os.getcwd()}/kw_lists/{site['Keyword Lists'][0]}.csv", index=False)
+        kw_list_path = f"{os.getcwd()}/kw_lists/{site['Keyword Lists'][0]}.csv"
         if 'Test' not in site['Status']:
             print(f"Starting Full Build {site['Bucket Name']}")
             update_record(record['id'], {'Status': 'In progress'})
@@ -75,7 +88,7 @@ def build_sites():  # sourcery no-metrics
             print(f"Starting Test Build {site['Bucket Name']}")
 
 
-        spun_article_dir = f"{os.getcwd()}/spun_articles/{site['Article'][0].lower()}"
+        spun_article_dir = f"{os.getcwd()}/spun_articles/{site['Article Name'][0].lower().replace(' ', '_')}"
 
         if not os.path.exists(spun_article_dir):
             print('*' * 80)
@@ -99,14 +112,23 @@ def build_sites():  # sourcery no-metrics
                 content = requests.get(article['url'])
                 with open(f"{spun_article_dir}/{article['filename']}", 'w') as f:
                     f.write(content.text)
-            print(site)
+            # print(site)
             
 
         build_dir = create_hugo_directory(domain)
 
         create_hugo_config(domain, build_dir, site['offer_link'][0])
-        subprocess.Popen(
-            f"php spintax.php {kw_list_path} {spun_article_dir} {build_dir}/content/posts {start_date}", shell=True).wait()
+
+
+        if 'Test' not in site['Status']:
+            num_posts = '-1'
+            subprocess.Popen(
+                f"php spintax.php {kw_list_path} {spun_article_dir} {build_dir}/content/posts {num_posts} {start_date}", shell=True).wait()
+        else:
+            num_posts = '5'
+            subprocess.Popen(
+                f"php spintax.php {kw_list_path} {spun_article_dir} {build_dir}/content/posts {num_posts} {start_date}", shell=True).wait()
+            
 
         subprocess.Popen(
             f"./hugo_build.sh {domain} {STAGING_PATH} {build_dir}", shell=True).wait()
@@ -117,13 +139,12 @@ def build_sites():  # sourcery no-metrics
         else:
             print(f"Finished Test Build {site['Bucket Name']}")
 
-
-        # Article Forge Integration
         # upload zip to backup s3 bucket
+        # Add the about/contact/disclaimer pages
     return
 
 
-def create_hugo_config(domain, dst_dir, offer_link):
+def create_hugo_config(domain, dst_dir, offer_link, monetization='302 Redirect'):
 
     yaml_file_dict = {
         'baseURL': '', 'menu': {'main':
@@ -138,8 +159,10 @@ def create_hugo_config(domain, dst_dir, offer_link):
     with open(f'{dst_dir}/config/_default/config.yaml', 'w') as yaml_file:
         docs = yaml.dump(yaml_file_dict, yaml_file)
     offer_link = f"{offer_link}/{domain.replace('.', '')}"
-    with open(f'{dst_dir}/static/js/custom.js', 'w') as js_file:
-        js_file.write(redir_script.replace('{{ offer_link }}', offer_link))
+    if monetization == '302 Redirect':
+        with open(f'{dst_dir}/static/js/custom.js', 'w') as js_file:
+            js_file.write(redir_script.replace('{{ offer_link }}', offer_link))
+    
     return
 
 
