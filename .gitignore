@@ -1,4 +1,4 @@
-content
+# content
 public
 staging
 seoad_builds
@@ -9,5 +9,5 @@ __pycache__
 .env
 spun_articles
 vendor
-hugo_build_folder/.DS_Store
+hugo_build_folder/*
 .DS_Store

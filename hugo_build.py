@@ -147,18 +147,28 @@ def build_sites():  # sourcery no-metrics
 def create_hugo_config(domain, dst_dir, offer_link, monetization='302 Redirect'):
 
     yaml_file_dict = {
-        'baseURL': '', 'menu': {'main':
-                                [{'identifier': 'contact', 'name': 'contact', 'url': 'contact/', 'weight': 10}, {'identifier': 'disclaimer', 'name': 'disclaimer', 'url': 'disclaimer/', 'weight': 20}, {
-                                    'identifier': 'privacy', 'name': 'privacy', 'url': 'privacy/', 'weight': 30}, {'identifier': 'sitemap', 'name': 'sitemap', 'url': '/sitemap.xml', 'weight': 40}]
+        'baseURL': '',
+         'menu': {'main': [
+            {'identifier': 'contact',
+             'name': 'contact',
+             'url': 'contact.html',
+             'weight': 10},
+                {'identifier': 'disclaimer', 'name': 'disclaimer', 'url': 'disclaimer.html', 'weight': 20}, {
+                                    'identifier': 'privacy', 'name': 'privacy', 'url': 'privacy.html', 'weight': 30}, {'identifier': 'sitemap', 'name': 'sitemap', 'url': '/sitemap.xml', 'weight': 40}]
 
                                 # , 'umami': domain.uuid
                                 # , 'umamiUrl': 'https://umami-vercel-chi.vercel.app/umami.js'
-                                }, 'title': domain, 'paginate': 5, 'theme': 'PaperMod', 'enableRobotsTXT': True, 'buildDrafts': False, 'buildFuture': False, 'buildExpired': False, 'minify': {'disableXML': True, 'minifyOutput': True}, 'params': {'hideFooter': True, 'env': 'production', 'title': domain, 'custom_js': ['/js/custom.js'], 'description': domain, 'DateFormat': 'January 2, 2006', 'defaultTheme': 'auto', 'disableThemeToggle': False, 'ShowReadingTime': True, 'ShowShareButtons': True, 'ShowPostNavLinks': True, 'ShowBreadCrumbs': True, 'ShowCodeCopyButtons': False, 'ShowWordCount': True, 'ShowRssButtonInSectionTermList': True, 'UseHugoToc': True, 'disableSpecial1stPost': False, 'disableScrollToTop': False, 'comments': False, 'hidemeta': False, 'hideSummary': False, 'showtoc': False, 'tocopen': False, 'label': {'text': f'Welcome to {domain}', 'icon': '/apple-touch-icon.png', 'iconHeight': 35}, 'cover': {'hidden': True, 'hiddenInList': True, 'hiddenInSingle': True}
+                                }, 'title': domain, 'paginate': 25, 'theme': 'PaperMod', 'enableRobotsTXT': True, 'buildDrafts': False, 'buildFuture': False, 'buildExpired': False, 'minify': {'disableXML': True, 'minifyOutput': True}, 'params': {'hideFooter': True, 'env': 'production', 'title': domain, 'custom_js': ['/js/custom.js'], 'description': domain, 'DateFormat': 'January 2, 2006', 'defaultTheme': 'auto', 'disableThemeToggle': False, 'ShowReadingTime': True, 'ShowShareButtons': True, 'ShowPostNavLinks': True, 'ShowBreadCrumbs': True, 'ShowCodeCopyButtons': False, 'ShowWordCount': True, 'ShowRssButtonInSectionTermList': True, 'UseHugoToc': True, 'disableSpecial1stPost': False, 'disableScrollToTop': False, 'comments': False, 'hidemeta': False, 'hideSummary': False, 'showtoc': False, 'tocopen': False, 'label': {'text': f'Welcome to {domain}', 'icon': '/apple-touch-icon.png', 'iconHeight': 35}, 'cover': {'hidden': True, 'hiddenInList': True, 'hiddenInSingle': True}
 
                                                                                                                                                                                                                                                       }}
     with open(f'{dst_dir}/config/_default/config.yaml', 'w') as yaml_file:
         docs = yaml.dump(yaml_file_dict, yaml_file)
     offer_link = f"{offer_link}/{domain.replace('.', '')}"
+    with open(f'{dst_dir}/content/privacy.html', 'r') as privacy_file:
+        content = privacy_file.read()
+        new_content = content.replace('{{ domain }}', domain)
+    with open(f'{dst_dir}/content/privacy.html', 'w') as privacy_file:
+        privacy_file.write(new_content)
     if monetization == '302 Redirect':
         with open(f'{dst_dir}/static/js/custom.js', 'w') as js_file:
             js_file.write(redir_script.replace('{{ offer_link }}', offer_link))
