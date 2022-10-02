@@ -122,12 +122,13 @@ while (!feof($file)) {
 
     $text = file_get_contents($articleDir . '/' . $input[$rand_keys]);
     $keyword = fgetcsv($file)[0];
+    $keyword = substr($keyword, 0, 150);
     $slug = slugify($keyword);
+    $title = ucwords(str_replace('-', ' ', $slug));
     $myfile = fopen("$articleDst/$slug.html", "w") or die("Unable to open file!");
     $spun_doc = Spintax::parse($text);
- 
     fwrite($myfile, "---\n");
-    fwrite($myfile, "title: " . $keyword . "\n");
+    fwrite($myfile, "title: " . $title . "\n");
     // fwrite($myfile, "cover:\n");
     // fwrite($myfile, "  image: {featured_image}\n");
     // fwrite($myfile, "  hidden: false\n");
