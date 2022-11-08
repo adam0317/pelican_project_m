@@ -16,12 +16,11 @@ import article_forge
 import pandas as pd
 import ssl
 import shutil
-from ruamel.yaml import YAML
+import yaml
 from cloudflare import add_site_to_cloudflare, add_dns_to_cloudflare, add_page_rule, get_name_servers
 ssl._create_default_https_context = ssl._create_unverified_context
 
 load_dotenv()
-yaml = YAML()
 current_working_dir = os.getcwd()
 HUGO_BUILD_PATH = f"{os.getcwd()}/hugo_build_folder"
 STAGING_PATH = os.getenv('STAGING_PATH', './staging')
@@ -161,8 +160,16 @@ def create_hugo_config(domain, dst_dir, offer_link, monetization='302 Redirect')
                                 }, 'title': domain, 'paginate': 25, 'theme': 'PaperMod', 'enableRobotsTXT': True, 'buildDrafts': False, 'buildFuture': False, 'buildExpired': False, 'minify': {'disableXML': True, 'minifyOutput': True}, 'params': {'hideFooter': True, 'env': 'production', 'title': domain, 'custom_js': ['/js/custom.js'], 'description': domain, 'DateFormat': 'January 2, 2006', 'defaultTheme': 'auto', 'disableThemeToggle': False, 'ShowReadingTime': True, 'ShowShareButtons': True, 'ShowPostNavLinks': True, 'ShowBreadCrumbs': True, 'ShowCodeCopyButtons': False, 'ShowWordCount': True, 'ShowRssButtonInSectionTermList': True, 'UseHugoToc': True, 'disableSpecial1stPost': False, 'disableScrollToTop': False, 'comments': False, 'hidemeta': False, 'hideSummary': False, 'showtoc': False, 'tocopen': False, 'label': {'text': f'Welcome to {domain}', 'icon': '/apple-touch-icon.png', 'iconHeight': 35}, 'cover': {'hidden': True, 'hiddenInList': True, 'hiddenInSingle': True}
 
                                                                                                                                                                                                                                                       }}
-    with open(f'{dst_dir}/config/_default/config.yaml', 'w') as yaml_file:
-        docs = yaml.dump(yaml_file_dict, yaml_file)
+
+
+    with open(f'{HUGO_TEMPLATE_DIR}/config/_default/config.yaml', 'r') as yaml_file:
+        docs = yaml.load(yaml_file, Loader=yaml.FullLoader)
+        docs['params']['label']['text'] = f'Welcome to {domain}'
+        docs['title'] = domain
+        docs['params']['title'] = domain
+        docs['params']['description'] = domain
+        with open(f'{dst_dir}/config/_default/config.yaml', 'w') as yaml_file:
+            docs = yaml.dump(docs, yaml_file)
     offer_link = f"{offer_link}/{domain.replace('.', '')}"
     with open(f'{dst_dir}/content/privacy.html', 'r') as privacy_file:
         content = privacy_file.read()

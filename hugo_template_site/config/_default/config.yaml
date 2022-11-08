@@ -1,0 +1,58 @@
+baseURL: ''
+menu:
+  main:
+  - identifier: contact
+    name: contact
+    url: contact.html
+    weight: 10
+  - identifier: disclaimer
+    name: disclaimer
+    url: disclaimer.html
+    weight: 20
+  - identifier: privacy
+    name: privacy
+    url: privacy.html
+    weight: 30
+  - identifier: sitemap
+    name: sitemap
+    url: /sitemap.xml
+    weight: 40
+paginate: 25
+theme: PaperMod
+enableRobotsTXT: true
+buildDrafts: false
+buildFuture: false
+buildExpired: false
+minify:
+  disableXML: true
+  minifyOutput: true
+params:
+  hideFooter: true
+  env: production
+  custom_js:
+  - /js/custom.js
+  DateFormat: January 2, 2006
+  defaultTheme: auto
+  disableThemeToggle: false
+  ShowReadingTime: true
+  ShowShareButtons: true
+  ShowPostNavLinks: true
+  ShowBreadCrumbs: true
+  ShowCodeCopyButtons: false
+  ShowWordCount: true
+  ShowRssButtonInSectionTermList: true
+  UseHugoToc: true
+  disableSpecial1stPost: false
+  disableScrollToTop: false
+  comments: false
+  hidemeta: false
+  hideSummary: false
+  showtoc: false
+  tocopen: false
+  label:
+    icon: /apple-touch-icon.png
+    iconHeight: 35
+  cover:
+    hidden: true
+    hiddenInList: true
+    hiddenInSingle: true
