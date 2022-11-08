@@ -5,15 +5,33 @@ import json
 import subprocess
 import requests
 from dotenv import load_dotenv
-from spin_rw import spin_article
 from datetime import datetime
 from air_table import add_new_record, get_ready_to_build_records, get_ready_to_deploy_records, get_records_to_add_to_cloudflare, search_table,  update_record
 import ssl
-import shutil
-import yaml
+
 from cloudflare import add_site_to_cloudflare, add_dns_to_cloudflare, add_page_rule, get_name_servers
-from utils import combine_and_clean_kw_list
+from utils import combine_and_clean_kw_list, create_hugo_config, create_hugo_directory
 ssl._create_default_https_context = ssl._create_unverified_context
+
+import logging
+
+import sys
+
+logger = logging.getLogger()
+logger.setLevel(logging.INFO)
+formatter = logging.Formatter('%(asctime)s | %(levelname)s | %(message)s')
+
+stdout_handler = logging.StreamHandler(sys.stdout)
+stdout_handler.setLevel(logging.DEBUG)
+stdout_handler.setFormatter(formatter)
+
+file_handler = logging.FileHandler('logs.log')
+file_handler.setLevel(logging.DEBUG)
+file_handler.setFormatter(formatter)
+
+
+logger.addHandler(file_handler)
+logger.addHandler(stdout_handler)
 
 load_dotenv()
 current_working_dir = os.getcwd()
@@ -22,23 +40,6 @@ STAGING_PATH = os.getenv('STAGING_PATH', './staging')
 HUGO_TEMPLATE_DIR = f'{os.path.join(current_working_dir, "hugo_template_site")}'
 WASABI_ACCESS_KEY_ID = os.getenv('WASABI_ACCESS_KEY')
 WASABI_SECRET_ACCESS_KEY = os.getenv('WASABI_SECRET_KEY')
-
-
-def send_article_to_spin_rewriter(keyword):
-    article_to_spin = f"./new_articles/{keyword}.txt"
-    spin_article(article_to_spin, keyword)
-    return
-
-
-def create_hugo_directory(domain_name):
-    new_dir = f'{HUGO_BUILD_PATH}/campaigns/{domain_name}'
-    print(f'{os.path.join(current_working_dir, new_dir)}')
-    if os.path.exists(new_dir):
-        print("removing existing directory")
-        shutil.rmtree(new_dir)
-    shutil.copytree(HUGO_TEMPLATE_DIR, new_dir)
-    return new_dir
-
 
 def build_sites():  # sourcery no-metrics
 
@@ -50,38 +51,31 @@ def build_sites():  # sourcery no-metrics
         domain = site['Base Domain']
 
         kw_list_exists = False
-        kw_urls = []
+
         for i in site['Keyword Lists']:
             kw_list_exists = os.path.exists(f'{os.getcwd()}/kw_lists/{i}.csv')
-            # kw_urls.append(
             if kw_list_exists:
                 break
         if not kw_list_exists:
             combine_and_clean_kw_list(site)
         kw_list_path = f"{os.getcwd()}/kw_lists/{site['Keyword Lists'][0]}.csv"
         if 'Test' not in site['Status']:
-            print(f"Starting Full Build {site['Bucket Name']}")
+            logging.debug(f"Starting Full Build {site['Bucket Name']}")
             update_record(record['id'], {'Status': 'In progress'})
         else:
-            print(f"Starting Test Build {site['Bucket Name']}")
+            logging.debug(f"Starting Test Build {site['Bucket Name']}")
 
         spun_article_dir = f"{os.getcwd()}/spun_articles/{site['Article Name'][0].lower().replace(' ', '_')}"
 
         if not os.path.exists(spun_article_dir):
-            print('*' * 80)
-            print(f'No Article Directory Found For {domain}')
-            print('*' * 80)
             os.makedirs(spun_article_dir)
-            # Get an article from article_forge
 
         if len(os.listdir(spun_article_dir)) == 0:
-            print('*' * 80)
-            print(f'No Local Article Found For {domain}')
-            print('*' * 80)
             articles = site['article_file']
             if not articles:
-                print(f'No Remote Article File Found For {domain}')
-                print('*' * 80)
+                logging.info('*' * 80)
+                logging.info(f'No Remote Article File Found For {domain}')
+                logging.info('*' * 80)
                 continue
             for article in articles:
                 content = requests.get(article['url'])
@@ -104,79 +98,15 @@ def build_sites():  # sourcery no-metrics
         subprocess.Popen(
             f"./hugo_build.sh {domain} {STAGING_PATH} {build_dir}", shell=True).wait()
         if 'Test' not in site['Status']:
-            print(f"Finished Full Build {site['Bucket Name']}")
+            logging.info(f"Finished Full Build {site['Bucket Name']}")
 
             update_record(record['id'], {'Status': 'Ready To Deploy'})
         else:
-            print(f"Finished Test Build {site['Bucket Name']}")
+            logging.info(f"Finished Test Build {site['Bucket Name']}")
 
         # upload zip to backup s3 bucket
         # Add the about/contact/disclaimer pages
     return
-
-
-def create_hugo_config(domain, dst_dir, offer_link, monetization='302 Redirect'):
-
-    with open(f'{HUGO_TEMPLATE_DIR}/config/_default/config.yaml', 'r') as yaml_file:
-        docs = yaml.load(yaml_file, Loader=yaml.FullLoader)
-        docs['params']['label']['text'] = f'Welcome to {domain}'
-        docs['title'] = domain
-        docs['params']['title'] = domain
-        docs['params']['description'] = domain
-        with open(f'{dst_dir}/config/_default/config.yaml', 'w') as yaml_file:
-            docs = yaml.dump(docs, yaml_file)
-    offer_link = f"{offer_link}/{domain.replace('.', '')}"
-    with open(f'{dst_dir}/content/privacy.html', 'r') as privacy_file:
-        content = privacy_file.read()
-        new_content = content.replace('{{ domain }}', domain)
-    with open(f'{dst_dir}/content/privacy.html', 'w') as privacy_file:
-        privacy_file.write(new_content)
-    if monetization == '302 Redirect':
-        with open(f'{dst_dir}/static/js/custom.js', 'w') as js_file:
-            js_file.write(redir_script.replace('{{ offer_link }}', offer_link))
-
-    return
-
-
-redir_script = """
-const urlParams = new URLSearchParams(window.location.search);
-const redir = urlParams.get("redir");
-const currentHost = window.location.href;
-console.log(currentHost);
-// const currentDomain = window.location.host
-if (!redir) {
-  if (!currentHost.includes("localhost")) {
-    let agents = [
-      "goog",
-      "bot",
-      "slurp",
-      "msn",
-      "scooter",
-      "yahoo",
-      "crawler",
-      "media",
-      "bing",
-      "ask",
-    ];
-    found = agents.findIndex((element) =>
-      navigator.userAgent.toLowerCase().includes(element)
-    );
-
-    if (found < 0) {
-      let offer_link = "{{ offer_link }}";
-
-      if (offer_link.includes("?")) {
-        offer_link = offer_link + "&referring_url=" + window.location.href;
-      } else {
-        offer_link = offer_link + "?referring_url=" + window.location.href;
-      }
-
-      window.location.replace(encodeURI(offer_link));
-    }
-  }
-}
-"""
-
 
 def handle_dns():
     sites = get_records_to_add_to_cloudflare()
@@ -184,22 +114,22 @@ def handle_dns():
     for record in sites:
         site = record['fields']
         domain = site['Base Domain']
-        print(f"Checking {domain} for DNS record")
+        logging.info(f"Checking {domain} for DNS record")
         if not site.get('Bucket Created'):
             try:
                 created = create_bucket(domain)
                 if created:
                     update_record(record['id'], {'Bucket Created': True})
             except Exception as e:
-                print(e)
+                logging.info(e)
                 continue
         if not site.get('Site Added To Cloudflare'):
             try:
                 zone = add_site_to_cloudflare(domain)
-                print(zone)
+                logging.info(zone)
                 update_record(record['id'], {'Site Added To Cloudflare': True})
             except Exception as e:
-                print(e)
+                logging.info(e)
                 continue
         if not site.get('DNS Added To Cloudflare'):
             try:
@@ -210,11 +140,11 @@ def handle_dns():
                 update_record(
                     record['id'], {'DNS Added To Cloudflare': True, 'Status': 'Ready To Build'})
             except Exception as e:
-                print(e)
+                logging.info(e)
                 continue
         if not site.get('Nameservers'):
             name_servers = get_name_servers(domain)
-            print(name_servers)
+            logging.info(name_servers)
             update_record(
                 record['id'], {'Nameservers': ' '.join(name_servers)})
         sleep(1)
@@ -254,7 +184,7 @@ def create_bucket(bucket_name):
         s3.put_bucket_policy(Bucket=bucket_name, Policy=policy)
         return True
     except Exception as e:
-        print(e)
+        logging.info(e)
         return False
 
 
@@ -265,7 +195,7 @@ def deploy_sites():
         domain_type = 'Root'
         site = record['fields']
         domain = site['Base Domain']
-        print(f"Deploying {domain} {date_time}")
+        logging.info(f"Deploying {domain} {date_time}")
         update_record(record['id'], {'Status': 'Deploying'})
         subprocess.Popen(
             f"./hugo_deploy.sh {domain}", shell=True).wait()

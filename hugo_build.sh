@@ -18,4 +18,4 @@ cd $2/zip
 zip -q -r $sitename.zip $build_path/public
 
 echo "Deleting Build Files"
-rm -rf $build_path
+# rm -rf $build_path
