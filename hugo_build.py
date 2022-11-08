@@ -31,6 +31,7 @@ WASABI_SECRET_ACCESS_KEY = os.getenv('WASABI_SECRET_KEY')
 if not os.path.exists(STAGING_PATH):
     os.makedirs(STAGING_PATH)
 
+
 def send_article_to_spin_rewriter(keyword):
     article_to_spin = f"./new_articles/{keyword}.txt"
     spin_article(article_to_spin, keyword)
@@ -67,10 +68,10 @@ def build_sites():  # sourcery no-metrics
             for i in site['csv_file']:
                 kw_urls.append(i['url'])
             df = pd.concat([pd.read_csv(f) for f in kw_urls])
-            spec_chars = ["!",'"',"#","%","&","'","(",")",
-              "*","+",",","-",".","/",":",";","<",
-              "=",">","?","@","[","\\","]","^","_",
-              "`","{","|","}","~","–","$",".",","]
+            spec_chars = ["!", '"', "#", "%", "&", "'", "(", ")",
+                          "*", "+", ",", "-", ".", "/", ":", ";", "<",
+                          "=", ">", "?", "@", "[", "\\", "]", "^", "_",
+                          "`", "{", "|", "}", "~", "–", "$", ".", ","]
 
             a = '/^[A-Za-z][A-Za-z0-9]*$/'
             for char in spec_chars:
@@ -78,14 +79,14 @@ def build_sites():  # sourcery no-metrics
             df['Keyword'] = df['Keyword'].str.split().str.join(" ")
 
             combined_csv = df['Keyword'].str.title()
-            combined_csv.to_csv(f"{os.getcwd()}/kw_lists/{site['Keyword Lists'][0]}.csv", index=False)
+            combined_csv.to_csv(
+                f"{os.getcwd()}/kw_lists/{site['Keyword Lists'][0]}.csv", index=False)
         kw_list_path = f"{os.getcwd()}/kw_lists/{site['Keyword Lists'][0]}.csv"
         if 'Test' not in site['Status']:
             print(f"Starting Full Build {site['Bucket Name']}")
             update_record(record['id'], {'Status': 'In progress'})
         else:
             print(f"Starting Test Build {site['Bucket Name']}")
-
 
         spun_article_dir = f"{os.getcwd()}/spun_articles/{site['Article Name'][0].lower().replace(' ', '_')}"
 
@@ -96,7 +97,6 @@ def build_sites():  # sourcery no-metrics
             os.makedirs(spun_article_dir)
             # Get an article from article_forge
 
-            
         if len(os.listdir(spun_article_dir)) == 0:
             print('*' * 80)
             print(f'No Local Article Found For {domain}')
@@ -107,17 +107,13 @@ def build_sites():  # sourcery no-metrics
                 print('*' * 80)
                 continue
             for article in articles:
-                
                 content = requests.get(article['url'])
                 with open(f"{spun_article_dir}/{article['filename']}", 'w') as f:
                     f.write(content.text)
-            # print(site)
-            
 
         build_dir = create_hugo_directory(domain)
 
         create_hugo_config(domain, build_dir, site['offer_link'][0])
-
 
         if 'Test' not in site['Status']:
             num_posts = '-1'
@@ -127,7 +123,6 @@ def build_sites():  # sourcery no-metrics
             num_posts = '5'
             subprocess.Popen(
                 f"php spintax.php {kw_list_path} {spun_article_dir} {build_dir}/content/posts {num_posts} {start_date}", shell=True).wait()
-            
 
         subprocess.Popen(
             f"./hugo_build.sh {domain} {STAGING_PATH} {build_dir}", shell=True).wait()
@@ -144,23 +139,6 @@ def build_sites():  # sourcery no-metrics
 
 
 def create_hugo_config(domain, dst_dir, offer_link, monetization='302 Redirect'):
-
-    yaml_file_dict = {
-        'baseURL': '',
-         'menu': {'main': [
-            {'identifier': 'contact',
-             'name': 'contact',
-             'url': 'contact.html',
-             'weight': 10},
-                {'identifier': 'disclaimer', 'name': 'disclaimer', 'url': 'disclaimer.html', 'weight': 20}, {
-                                    'identifier': 'privacy', 'name': 'privacy', 'url': 'privacy.html', 'weight': 30}, {'identifier': 'sitemap', 'name': 'sitemap', 'url': '/sitemap.xml', 'weight': 40}]
-
-                                # , 'umami': domain.uuid
-                                # , 'umamiUrl': 'https://umami-vercel-chi.vercel.app/umami.js'
-                                }, 'title': domain, 'paginate': 25, 'theme': 'PaperMod', 'enableRobotsTXT': True, 'buildDrafts': False, 'buildFuture': False, 'buildExpired': False, 'minify': {'disableXML': True, 'minifyOutput': True}, 'params': {'hideFooter': True, 'env': 'production', 'title': domain, 'custom_js': ['/js/custom.js'], 'description': domain, 'DateFormat': 'January 2, 2006', 'defaultTheme': 'auto', 'disableThemeToggle': False, 'ShowReadingTime': True, 'ShowShareButtons': True, 'ShowPostNavLinks': True, 'ShowBreadCrumbs': True, 'ShowCodeCopyButtons': False, 'ShowWordCount': True, 'ShowRssButtonInSectionTermList': True, 'UseHugoToc': True, 'disableSpecial1stPost': False, 'disableScrollToTop': False, 'comments': False, 'hidemeta': False, 'hideSummary': False, 'showtoc': False, 'tocopen': False, 'label': {'text': f'Welcome to {domain}', 'icon': '/apple-touch-icon.png', 'iconHeight': 35}, 'cover': {'hidden': True, 'hiddenInList': True, 'hiddenInSingle': True}
-
-                                                                                                                                                                                                                                                      }}
-
 
     with open(f'{HUGO_TEMPLATE_DIR}/config/_default/config.yaml', 'r') as yaml_file:
         docs = yaml.load(yaml_file, Loader=yaml.FullLoader)
@@ -179,7 +157,7 @@ def create_hugo_config(domain, dst_dir, offer_link, monetization='302 Redirect')
     if monetization == '302 Redirect':
         with open(f'{dst_dir}/static/js/custom.js', 'w') as js_file:
             js_file.write(redir_script.replace('{{ offer_link }}', offer_link))
-    
+
     return
 
 
@@ -252,14 +230,16 @@ def handle_dns():
                     domain, '@', f"{domain}.s3.us-west-1.wasabisys.com", True)
                 add_dns_to_cloudflare(domain, 'www', domain, True)
                 add_page_rule(domain)
-                update_record(record['id'], {'DNS Added To Cloudflare': True, 'Status': 'Ready To Build'})
+                update_record(
+                    record['id'], {'DNS Added To Cloudflare': True, 'Status': 'Ready To Build'})
             except Exception as e:
                 print(e)
                 continue
         if not site.get('Nameservers'):
             name_servers = get_name_servers(domain)
             print(name_servers)
-            update_record(record['id'], {'Nameservers': ' '.join(name_servers)})
+            update_record(
+                record['id'], {'Nameservers': ' '.join(name_servers)})
         sleep(1)
 
     return
@@ -333,7 +313,8 @@ def deploy_sites():
 
 
 if __name__ == "__main__":
-    build_step = input('Choose a build step: \n1. dns\n2. build sites\n3. deploy_sites\n4. full run\n')
+    build_step = input(
+        'Choose a build step: \n1. dns\n2. build sites\n3. deploy_sites\n4. full run\n')
     print(build_step)
     if build_step == str(1):
         handle_dns()
