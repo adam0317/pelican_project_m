@@ -1,6 +1,3 @@
-# from cloudflare import add_site_to_cloudflare, add_dns_to_cloudflare
-# import sthree
-import csv
 import os
 from time import sleep
 import boto3
@@ -11,13 +8,11 @@ from dotenv import load_dotenv
 from spin_rw import spin_article
 from datetime import datetime
 from air_table import add_new_record, get_ready_to_build_records, get_ready_to_deploy_records, get_records_to_add_to_cloudflare, search_table,  update_record
-import article_forge
-# from build_pages import multi_thread_posts, add_base_pages
-import pandas as pd
 import ssl
 import shutil
 import yaml
 from cloudflare import add_site_to_cloudflare, add_dns_to_cloudflare, add_page_rule, get_name_servers
+from utils import combine_and_clean_kw_list
 ssl._create_default_https_context = ssl._create_unverified_context
 
 load_dotenv()
@@ -27,9 +22,6 @@ STAGING_PATH = os.getenv('STAGING_PATH', './staging')
 HUGO_TEMPLATE_DIR = f'{os.path.join(current_working_dir, "hugo_template_site")}'
 WASABI_ACCESS_KEY_ID = os.getenv('WASABI_ACCESS_KEY')
 WASABI_SECRET_ACCESS_KEY = os.getenv('WASABI_SECRET_KEY')
-
-if not os.path.exists(STAGING_PATH):
-    os.makedirs(STAGING_PATH)
 
 
 def send_article_to_spin_rewriter(keyword):
@@ -65,22 +57,7 @@ def build_sites():  # sourcery no-metrics
             if kw_list_exists:
                 break
         if not kw_list_exists:
-            for i in site['csv_file']:
-                kw_urls.append(i['url'])
-            df = pd.concat([pd.read_csv(f) for f in kw_urls])
-            spec_chars = ["!", '"', "#", "%", "&", "'", "(", ")",
-                          "*", "+", ",", "-", ".", "/", ":", ";", "<",
-                          "=", ">", "?", "@", "[", "\\", "]", "^", "_",
-                          "`", "{", "|", "}", "~", "–", "$", ".", ","]
-
-            a = '/^[A-Za-z][A-Za-z0-9]*$/'
-            for char in spec_chars:
-                df['Keyword'] = df['Keyword'].str.replace(char, '')
-            df['Keyword'] = df['Keyword'].str.split().str.join(" ")
-
-            combined_csv = df['Keyword'].str.title()
-            combined_csv.to_csv(
-                f"{os.getcwd()}/kw_lists/{site['Keyword Lists'][0]}.csv", index=False)
+            combine_and_clean_kw_list(site)
         kw_list_path = f"{os.getcwd()}/kw_lists/{site['Keyword Lists'][0]}.csv"
         if 'Test' not in site['Status']:
             print(f"Starting Full Build {site['Bucket Name']}")
@@ -313,9 +290,13 @@ def deploy_sites():
 
 
 if __name__ == "__main__":
+    if not os.path.exists(STAGING_PATH):
+        os.makedirs(STAGING_PATH)
+
+
     build_step = input(
         'Choose a build step: \n1. dns\n2. build sites\n3. deploy_sites\n4. full run\n')
-    print(build_step)
+
     if build_step == str(1):
         handle_dns()
     if build_step == str(2):
