@@ -6,7 +6,7 @@ cd $build_path
 
 # currentDate=`date +"%Y-%m-%d %T"`
 # echo $currentDate
-HUGO_UGLYURLS=true hugo 
+HUGO_UGLYURLS=true hugo --log --verboseLog=true
 
 echo "Starting Hugo Move Files"
 mkdir -p $staging_path

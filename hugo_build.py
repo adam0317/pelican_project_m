@@ -2,7 +2,8 @@ import os
 from time import sleep
 import boto3
 import json
-import subprocess
+from subprocess import Popen, PIPE, STDOUT
+
 import requests
 from dotenv import load_dotenv
 from datetime import datetime
@@ -40,6 +41,17 @@ STAGING_PATH = os.getenv('STAGING_PATH', './staging')
 HUGO_TEMPLATE_DIR = f'{os.path.join(current_working_dir, "hugo_template_site")}'
 WASABI_ACCESS_KEY_ID = os.getenv('WASABI_ACCESS_KEY')
 WASABI_SECRET_ACCESS_KEY = os.getenv('WASABI_SECRET_KEY')
+
+def check_io(process):
+    while True:
+        try:
+            output = process.stdout.readline().decode()
+            if output:
+                logger.log(logging.INFO, output)
+            else:
+                break
+        except:
+            break
 
 def build_sites():  # sourcery no-metrics
 
@@ -88,15 +100,25 @@ def build_sites():  # sourcery no-metrics
 
         if 'Test' not in site['Status']:
             num_posts = '-1'
-            subprocess.Popen(
-                f"php spintax.php {kw_list_path} {spun_article_dir} {build_dir}/content/posts {num_posts} {start_date}", shell=True).wait()
+            process = Popen(
+                f"php spintax.php {kw_list_path} {spun_article_dir} {build_dir}/content/posts {num_posts} {start_date}", shell=True, stdout=PIPE, stderr=STDOUT)
+            while process.poll() is None:
+                check_io(process)
+            
         else:
             num_posts = '5'
-            subprocess.Popen(
-                f"php spintax.php {kw_list_path} {spun_article_dir} {build_dir}/content/posts {num_posts} {start_date}", shell=True).wait()
+            process = Popen(
+                f"php spintax.php {kw_list_path} {spun_article_dir} {build_dir}/content/posts {num_posts} {start_date}", shell=True, stdout=PIPE, stderr=STDOUT)
+            while process.poll() is None:
+                check_io(process)
 
-        subprocess.Popen(
-            f"./hugo_build.sh {domain} {STAGING_PATH} {build_dir}", shell=True).wait()
+            
+
+        process = Popen(
+            f"./hugo_build.sh {domain} {STAGING_PATH} {build_dir}", shell=True)
+        while process.poll() is None:
+            check_io(process)
+        
         if 'Test' not in site['Status']:
             logging.info(f"Finished Full Build {site['Bucket Name']}")
 
@@ -197,7 +219,7 @@ def deploy_sites():
         domain = site['Base Domain']
         logging.info(f"Deploying {domain} {date_time}")
         update_record(record['id'], {'Status': 'Deploying'})
-        subprocess.Popen(
+        Popen(
             f"./hugo_deploy.sh {domain}", shell=True).wait()
 
         live_site_record = {

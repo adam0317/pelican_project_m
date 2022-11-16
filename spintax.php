@@ -154,5 +154,5 @@ function slugify ($title){
 }
 
 
-
-echo " Execution time of script = " . $execution_time . " sec\n";
+echo "Total Files Created: " . $row;
+echo " Execution time " . $execution_time . " sec\n";

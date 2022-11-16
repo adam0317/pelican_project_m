@@ -13,8 +13,6 @@ HUGO_TEMPLATE_DIR = f'{os.path.join(current_working_dir, "hugo_template_site")}'
 WASABI_ACCESS_KEY_ID = os.getenv('WASABI_ACCESS_KEY')
 WASABI_SECRET_ACCESS_KEY = os.getenv('WASABI_SECRET_KEY')
 
-logging.basicConfig(filename='app.log', filemode='w',
-                    format='%(name)s - %(levelname)s - %(message)s')
 
 
 def combine_and_clean_kw_list(site):
