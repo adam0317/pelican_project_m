@@ -37,3 +37,5 @@ Create Link in Link service
 Get KW list
 Get articles
 Get domains
+
+Refactor so this code will run anywhere

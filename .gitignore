@@ -13,3 +13,4 @@ hugo_build_folder/*
 .DS_Store
 app.log
 logs.log
+new_articles

@@ -1,22 +1,20 @@
+import sys
+import logging
 import os
-from time import sleep
+import requests
 import boto3
 import json
+import ssl
 from subprocess import Popen, PIPE, STDOUT
-
-import requests
+from time import sleep
 from dotenv import load_dotenv
 from datetime import datetime
 from air_table import add_new_record, get_ready_to_build_records, get_ready_to_deploy_records, get_records_to_add_to_cloudflare, search_table,  update_record
-import ssl
-
+from article_forge import initiate_article
 from cloudflare import add_site_to_cloudflare, add_dns_to_cloudflare, add_page_rule, get_name_servers
 from utils import combine_and_clean_kw_list, create_hugo_config, create_hugo_directory
 ssl._create_default_https_context = ssl._create_unverified_context
 
-import logging
-
-import sys
 
 logger = logging.getLogger()
 logger.setLevel(logging.INFO)
@@ -42,6 +40,7 @@ HUGO_TEMPLATE_DIR = f'{os.path.join(current_working_dir, "hugo_template_site")}'
 WASABI_ACCESS_KEY_ID = os.getenv('WASABI_ACCESS_KEY')
 WASABI_SECRET_ACCESS_KEY = os.getenv('WASABI_SECRET_KEY')
 
+
 def check_io(process):
     while True:
         try:
@@ -52,6 +51,7 @@ def check_io(process):
                 break
         except:
             break
+
 
 def build_sites():  # sourcery no-metrics
 
@@ -88,6 +88,9 @@ def build_sites():  # sourcery no-metrics
                 logging.info('*' * 80)
                 logging.info(f'No Remote Article File Found For {domain}')
                 logging.info('*' * 80)
+                # Get article from article forge
+                ref_key = initiate_article(site['article_forge_keyword'], sub_keywords='Website Builder, Funnel',
+                                           image=1, video=1, length='short')
                 continue
             for article in articles:
                 content = requests.get(article['url'])
@@ -104,7 +107,7 @@ def build_sites():  # sourcery no-metrics
                 f"php spintax.php {kw_list_path} {spun_article_dir} {build_dir}/content/posts {num_posts} {start_date}", shell=True, stdout=PIPE, stderr=STDOUT)
             while process.poll() is None:
                 check_io(process)
-            
+
         else:
             num_posts = '5'
             process = Popen(
@@ -112,13 +115,11 @@ def build_sites():  # sourcery no-metrics
             while process.poll() is None:
                 check_io(process)
 
-            
-
         process = Popen(
             f"./hugo_build.sh {domain} {STAGING_PATH} {build_dir}", shell=True)
         while process.poll() is None:
             check_io(process)
-        
+
         if 'Test' not in site['Status']:
             logging.info(f"Finished Full Build {site['Bucket Name']}")
 
@@ -129,6 +130,7 @@ def build_sites():  # sourcery no-metrics
         # upload zip to backup s3 bucket
         # Add the about/contact/disclaimer pages
     return
+
 
 def handle_dns():
     sites = get_records_to_add_to_cloudflare()
@@ -244,7 +246,6 @@ def deploy_sites():
 if __name__ == "__main__":
     if not os.path.exists(STAGING_PATH):
         os.makedirs(STAGING_PATH)
-
 
     build_step = input(
         'Choose a build step: \n1. dns\n2. build sites\n3. deploy_sites\n4. full run\n')
