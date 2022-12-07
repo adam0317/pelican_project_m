@@ -39,6 +39,9 @@ def combine_and_clean_kw_list(site):
     # save to csv
     combined_csv.to_csv(
         f"{os.getcwd()}/kw_lists/{site['Keyword Lists'][0]}.csv", index=False)
+    # get length of combined csv
+    kw_list_length = len(combined_csv)
+    return kw_list_length
 
 
 def send_article_to_spin_rewriter(keyword):
@@ -57,7 +60,10 @@ def create_hugo_config(domain, dst_dir, offer_link, monetization='302 Redirect')
         docs['params']['description'] = domain
         with open(f'{dst_dir}/config/_default/config.yaml', 'w') as yaml_file:
             docs = yaml.dump(docs, yaml_file)
-    offer_link = f"{offer_link}/{domain.replace('.', '')}"
+
+    tracking_id = ''.join(e for e in domain if e.isalnum())
+
+    offer_link = f"{offer_link}/{tracking_id}"
     with open(f'{dst_dir}/content/privacy.html', 'r') as privacy_file:
         content = privacy_file.read()
         new_content = content.replace('{{ domain }}', domain)

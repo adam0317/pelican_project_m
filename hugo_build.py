@@ -68,10 +68,12 @@ def build_sites():  # sourcery no-metrics
         for i in site['Keyword Lists']:
             kw_list_exists = os.path.exists(f'{os.getcwd()}/kw_lists/{i}.csv')
             if kw_list_exists:
+                num_keywords = sum(1 for line in open(f'{os.getcwd()}/kw_lists/{i}.csv'))
                 break
         if not kw_list_exists:
-            combine_and_clean_kw_list(site)
+            num_keywords = combine_and_clean_kw_list(site)
         kw_list_path = f"{os.getcwd()}/kw_lists/{site['Keyword Lists'][0]}.csv"
+        update_record(record['id'], {'num_keywords': num_keywords})
         if 'Test' not in site['Status']:
             logging.debug(f"Starting Full Build {site['Bucket Name']}")
             update_record(record['id'], {'Status': 'In progress'})
@@ -95,54 +97,26 @@ def build_sites():  # sourcery no-metrics
                 with open(article_path, 'w') as f:
                     f.write(article_content)
             else:
-
+                article_forge_sub_keywords = site.get('article_forge_sub_keywords')
+                article_forge_excluded_topics = site.get('article_forge_excluded_topics')
                 # Get article from article forge
-                ref_key = initiate_article(site['article_forge_keyword'], sub_keywords='Website Builder, Funnel', image=1, video=1, length='short')
+                ref_key = initiate_article(article_forge_keyword, sub_keywords=article_forge_sub_keywords, image=1, video=1, excluded_topics=article_forge_excluded_topics)
                 update_record(record['id'], {'article_forge_ref_key': ref_key})
                 article_content = wait_for_article(ref_key)
                 with open(article_path, 'w') as f:
                         f.write(article_content)
                 
         # check for spun version
-        spun_article_path = f"{os.getcwd()}/spun_articles/{article_forge_keyword_file_name}/{article_forge_keyword_file_name}.txt"
+        spun_article_dir = f"{os.getcwd()}/spun_articles/{article_forge_keyword_file_name}"
+        spun_article_path = f"{spun_article_dir}/{article_forge_keyword_file_name}.txt"
         spun_article_exists = os.path.exists(spun_article_path)
         if not spun_article_exists:
             # Spin article
-            try:
-                os.makedirs(f"{os.getcwd()}/spun_articles/{article_forge_keyword_file_name}")
-            except:
-                pass
+            if not os.path.exists(spun_article_dir):
+                os.makedirs(spun_article_dir)
             spun_article = spin_article(article_path)
             with open(spun_article_path, 'w') as f:
                 f.write(spun_article)
-        continue
-        try:
-            spun_article_dir = f"{os.getcwd()}/spun_articles/{site['Article Name'][0].lower().replace(' ', '_')}"
-        except:
-            spun_article_dir = f"{os.getcwd()}/spun_articles/{site['Base Domain'].lower().replace(' ', '_')}"
-        if not os.path.exists(spun_article_dir):
-            os.makedirs(spun_article_dir)
-
-        if len(os.listdir(spun_article_dir)) == 0:
-            articles = site['article_file']
-            if not articles:
-                logging.info('*' * 80)
-                logging.info(f'No Remote Article File Found For {domain}')
-                logging.info('*' * 80)
-                # check for ref key in site
-                if site.get('article_forge_ref_key'):
-                    if get_article_status(site['article_forge_ref_key']) != 1:
-                        print('Article is not ready yet')
-                        continue
-                # Get article from article forge
-                ref_key = initiate_article(site['article_forge_keyword'], sub_keywords='Website Builder, Funnel',
-                                           image=1, video=1, length='short')
-                update_record(record['id'], {'article_forge_ref_key': ref_key})
-                continue
-            for article in articles:
-                content = requests.get(article['url'])
-                with open(f"{spun_article_dir}/{article['filename']}", 'w') as f:
-                    f.write(content.text)
 
         build_dir = create_hugo_directory(domain)
 
@@ -174,8 +148,7 @@ def build_sites():  # sourcery no-metrics
         else:
             logging.info(f"Finished Test Build {site['Bucket Name']}")
 
-        # upload zip to backup s3 bucket
-        # Add the about/contact/disclaimer pages
+
     return
 
 
@@ -218,6 +191,7 @@ def handle_dns():
             logging.info(name_servers)
             update_record(
                 record['id'], {'Nameservers': ' '.join(name_servers)})
+        update_record(record['id'], {'Status': 'Ready To Build'})
         sleep(1)
 
     return
@@ -277,7 +251,8 @@ def deploy_sites():
             'Offer': site['Offers'],
             'Server': site['Server'],
             'Domain Type': domain_type,
-            'KW Lists': site['KW List ID']
+            'KW Lists': site['KW List ID'],
+            'Pages': site['num_keywords'],
         }
         if 'Test' not in site['Status']:
             existing_record = search_table(site['Bucket Name'])
@@ -293,7 +268,9 @@ def deploy_sites():
 if __name__ == "__main__":
     if not os.path.exists(STAGING_PATH):
         os.makedirs(STAGING_PATH)
+    handle_dns()
     build_sites()
+    deploy_sites()
     # build_step = input(
     #     'Choose a build step: \n1. dns\n2. build sites\n3. deploy_sites\n4. full run\n')
 

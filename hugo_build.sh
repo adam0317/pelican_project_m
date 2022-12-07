@@ -17,5 +17,11 @@ mkdir -p $2/zip
 cd $2/zip
 zip -q -r $sitename.zip $build_path/public
 
+echo "Uploading Zip Files To Wasabi"
+aws s3 cp --profile wasabi $2/zip/$sitename.zip s3://hugo-project-m-zip-files/$sitename/ --endpoint-url=https://s3.us-west-1.wasabisys.com
+
+echo "Uploading Zip Files To AWS"
+aws s3 mv $2/zip/$sitename.zip s3://hugo-project-m-zip-files/$sitename/
+
 echo "Deleting Build Files"
-# rm -rf $build_path
+rm -rf $build_path

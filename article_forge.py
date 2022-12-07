@@ -9,7 +9,11 @@ ARTICLE_FORGE_API_KEY = os.environ.get('ARTICLE_FORGE_API_KEY')
 BASE_URL = 'https://af.articleforge.com/api'
 
 
-def initiate_article(keyword, sub_keywords=None, length='long', image=1, video=1, excluded_topics=None):
+def initiate_article(keyword, sub_keywords=None, length='short', image=1, video=1, excluded_topics=None):
+    """
+    length : the length of the article. It can be either 'very_short'(approximately 50 words), 'short'(approximately 250 words), 'medium'(approximately 500 words), 'long'(approximately 750 words), or 'very_long'(approximately 1,500 words). The default value is 'short'. When is set to 'very_long', use_section_heading must be set to 1. When length is set to 'very_short' or 'short',     must be either 0 or not provided.
+
+    """
     data = json.dumps({
         'key': ARTICLE_FORGE_API_KEY,
         'keyword': keyword,

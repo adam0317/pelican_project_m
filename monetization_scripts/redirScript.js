@@ -21,13 +21,6 @@ if (!redir) {
 
     if (found < 0) {
       let offer_link = "{{ offer_link }}";
-
-      if (offer_link.includes("?")) {
-        offer_link = offer_link + "&referring_url=" + window.location.href;
-      } else {
-        offer_link = offer_link + "?referring_url=" + window.location.href;
-      }
-
       window.location.replace(encodeURI(offer_link));
     }
   }
