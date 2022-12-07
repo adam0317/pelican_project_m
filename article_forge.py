@@ -2,6 +2,7 @@ import requests
 import os
 from dotenv import load_dotenv, find_dotenv
 import json
+import time
 load_dotenv(find_dotenv())
 
 ARTICLE_FORGE_API_KEY = os.environ.get('ARTICLE_FORGE_API_KEY')
@@ -40,7 +41,11 @@ def get_article_status(ref_key):
 def get_finished_article(ref_key):
     r = requests.post(f'{BASE_URL}/get_api_article_result',
                       data=json.dumps({'key': ARTICLE_FORGE_API_KEY, 'ref_key': ref_key}))
-    return r.json()
+    a = requests.post(f'{BASE_URL}/view_article',
+                      data=json.dumps({'key': ARTICLE_FORGE_API_KEY, 'article_id': r.json()['article_id']}))
+
+    article_content = a.json()['data']
+    return article_content
 
 
 def view_articles():
@@ -49,14 +54,25 @@ def view_articles():
     for i in r.json()['data']:
         print(i)
 
+def wait_for_article(ref_key):
+    waiting_for_article = True
+    while waiting_for_article:
+        if get_article_status(ref_key) != 1:
+            print('Article is not ready yet, waiting 30 seconds...')
+            time.sleep(30)
+        else:
+            waiting_for_article = False
+    finished_article = get_finished_article(ref_key)
+    return finished_article
+
 
 if __name__ == '__main__':
     import time
     # it can be either 'very_short'(approximately 50 words), 'short'(approximately 250 words),
     # 'medium'(approximately 500 words), 'long'(approximately 750 words), or 'very_long'(approximately 1,500 words).
-    ref_key = initiate_article('Builderall Vs Kartra', sub_keywords='Website Builder, Funnel',
-                               image=1, video=1, length='short')
-# ref_key = 268025801
+    # ref_key = initiate_article('Builderall Vs Kartra', sub_keywords='Website Builder, Funnel',
+                            #    image=1, video=1, length='short')
+    ref_key = 690159889
 
     waiting_for_article = True
     while waiting_for_article:

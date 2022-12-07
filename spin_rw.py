@@ -37,7 +37,7 @@ spinrewriter_api = SpinRewriterAPI(email_address, api_key)
 spinrewriter_api.set_add_html_markup(True)
 spinrewriter_api.set_confidence_level("high")
 
-def spin_article(file_path, keyword, protected_terms=None, add_html_markup=True):
+def spin_article(file_path, keyword=None, protected_terms=None, add_html_markup=True):
     #protected_terms = ["John", "Douglas", "Adams", "then"]
     print('Spinning article')
     if protected_terms:
@@ -53,8 +53,6 @@ def spin_article(file_path, keyword, protected_terms=None, add_html_markup=True)
         # print("Spin Rewriter API response")
         # TODO handle article spin errors
         article = result['response'].replace('h1', 'h2')
-        with open(f'./spun_articles/{keyword}.html', 'w') as file:
-            file.write(article)
         return article
     else:
         print("Spin Rewriter API error")

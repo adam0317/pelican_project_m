@@ -14,3 +14,4 @@ hugo_build_folder/*
 app.log
 logs.log
 new_articles
+articles

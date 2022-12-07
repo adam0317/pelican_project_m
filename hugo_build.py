@@ -10,8 +10,9 @@ from time import sleep
 from dotenv import load_dotenv
 from datetime import datetime
 from air_table import add_new_record, get_ready_to_build_records, get_ready_to_deploy_records, get_records_to_add_to_cloudflare, search_table,  update_record
-from article_forge import initiate_article
+from article_forge import get_article_status, get_finished_article, initiate_article, wait_for_article
 from cloudflare import add_site_to_cloudflare, add_dns_to_cloudflare, add_page_rule, get_name_servers
+from spin_rw import spin_article
 from utils import combine_and_clean_kw_list, create_hugo_config, create_hugo_directory
 ssl._create_default_https_context = ssl._create_unverified_context
 
@@ -76,9 +77,49 @@ def build_sites():  # sourcery no-metrics
             update_record(record['id'], {'Status': 'In progress'})
         else:
             logging.debug(f"Starting Test Build {site['Bucket Name']}")
+        
 
-        spun_article_dir = f"{os.getcwd()}/spun_articles/{site['Article Name'][0].lower().replace(' ', '_')}"
+        # Create a new article and directory for the article
+        # Check article forge for article
+        article_forge_keyword = site.get('article_forge_keyword')
+        if not article_forge_keyword:
+            logger.info(f'No Article Forge Keyword Found For {site}')
+        article_forge_keyword_file_name = article_forge_keyword.replace(' ', '_').lower()
+        article_path = f"{os.getcwd()}/articles/{article_forge_keyword_file_name}.txt"
+        article_exists = os.path.exists(article_path)
+        if not article_exists:
+            # Check for ref key in site
+            if site.get('article_forge_ref_key'):
+                
+                article_content = wait_for_article(site['article_forge_ref_key'])
+                with open(article_path, 'w') as f:
+                    f.write(article_content)
+            else:
 
+                # Get article from article forge
+                ref_key = initiate_article(site['article_forge_keyword'], sub_keywords='Website Builder, Funnel', image=1, video=1, length='short')
+                update_record(record['id'], {'article_forge_ref_key': ref_key})
+                article_content = wait_for_article(ref_key)
+                with open(article_path, 'w') as f:
+                        f.write(article_content)
+                
+        # check for spun version
+        spun_article_path = f"{os.getcwd()}/spun_articles/{article_forge_keyword_file_name}/{article_forge_keyword_file_name}.txt"
+        spun_article_exists = os.path.exists(spun_article_path)
+        if not spun_article_exists:
+            # Spin article
+            try:
+                os.makedirs(f"{os.getcwd()}/spun_articles/{article_forge_keyword_file_name}")
+            except:
+                pass
+            spun_article = spin_article(article_path)
+            with open(spun_article_path, 'w') as f:
+                f.write(spun_article)
+        continue
+        try:
+            spun_article_dir = f"{os.getcwd()}/spun_articles/{site['Article Name'][0].lower().replace(' ', '_')}"
+        except:
+            spun_article_dir = f"{os.getcwd()}/spun_articles/{site['Base Domain'].lower().replace(' ', '_')}"
         if not os.path.exists(spun_article_dir):
             os.makedirs(spun_article_dir)
 
@@ -88,9 +129,15 @@ def build_sites():  # sourcery no-metrics
                 logging.info('*' * 80)
                 logging.info(f'No Remote Article File Found For {domain}')
                 logging.info('*' * 80)
+                # check for ref key in site
+                if site.get('article_forge_ref_key'):
+                    if get_article_status(site['article_forge_ref_key']) != 1:
+                        print('Article is not ready yet')
+                        continue
                 # Get article from article forge
                 ref_key = initiate_article(site['article_forge_keyword'], sub_keywords='Website Builder, Funnel',
                                            image=1, video=1, length='short')
+                update_record(record['id'], {'article_forge_ref_key': ref_key})
                 continue
             for article in articles:
                 content = requests.get(article['url'])
@@ -246,17 +293,17 @@ def deploy_sites():
 if __name__ == "__main__":
     if not os.path.exists(STAGING_PATH):
         os.makedirs(STAGING_PATH)
+    build_sites()
+    # build_step = input(
+    #     'Choose a build step: \n1. dns\n2. build sites\n3. deploy_sites\n4. full run\n')
 
-    build_step = input(
-        'Choose a build step: \n1. dns\n2. build sites\n3. deploy_sites\n4. full run\n')
-
-    if build_step == str(1):
-        handle_dns()
-    if build_step == str(2):
-        build_sites()
-    if build_step == str(3):
-        deploy_sites()
-    if build_step == str(4):
-        handle_dns()
-        build_sites()
-        deploy_sites()
+    # if build_step == str(1):
+    #     handle_dns()
+    # if build_step == str(2):
+    #     build_sites()
+    # if build_step == str(3):
+    #     deploy_sites()
+    # if build_step == str(4):
+    #     handle_dns()
+    #     build_sites()
+    #     deploy_sites()
