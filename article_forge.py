@@ -9,7 +9,7 @@ ARTICLE_FORGE_API_KEY = os.environ.get('ARTICLE_FORGE_API_KEY')
 BASE_URL = 'https://af.articleforge.com/api'
 
 
-def initiate_article(keyword, sub_keywords=None, length='short', image=1, video=1, excluded_topics=None):
+def initiate_article(keyword, sub_keywords=None, length='very_long', image=1, video=1, excluded_topics=None):
     """
     length : the length of the article. It can be either 'very_short'(approximately 50 words), 'short'(approximately 250 words), 'medium'(approximately 500 words), 'long'(approximately 750 words), or 'very_long'(approximately 1,500 words). The default value is 'short'. When is set to 'very_long', use_section_heading must be set to 1. When length is set to 'very_short' or 'short',     must be either 0 or not provided.
 
@@ -24,10 +24,8 @@ def initiate_article(keyword, sub_keywords=None, length='short', image=1, video=
         'excluded_topics': excluded_topics
     })
     print(f"Initiating article for {keyword}")
-    print(f"Data: {data}")
 
     r = requests.post(f'{BASE_URL}/initiate_article', data=data)
-    print(r.json())
     if r.json()['status'] == 'Success':
         ref_key = r.json()['ref_key']
         return ref_key
@@ -61,8 +59,10 @@ def view_articles():
 def wait_for_article(ref_key):
     waiting_for_article = True
     while waiting_for_article:
-        if get_article_status(ref_key) != 1:
+        progress = get_article_status(ref_key)
+        if progress != 1:
             print('Article is not ready yet, waiting 30 seconds...')
+            print(f"Progress: {progress}")
             time.sleep(30)
         else:
             waiting_for_article = False

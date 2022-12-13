@@ -15,7 +15,7 @@ WASABI_SECRET_ACCESS_KEY = os.getenv('WASABI_SECRET_KEY')
 
 
 
-def combine_and_clean_kw_list(site):
+def combine_and_clean_kw_list(site, file_name):
     """Combine all the keywords into one clean list and remove duplicates."""
     kw_urls = []
     for i in site['csv_file']:
@@ -38,7 +38,7 @@ def combine_and_clean_kw_list(site):
     combined_csv = df['Keyword'].str.title()
     # save to csv
     combined_csv.to_csv(
-        f"{os.getcwd()}/kw_lists/{site['Keyword Lists'][0]}.csv", index=False)
+        f"{os.getcwd()}/kw_lists/{file_name}.csv", index=False)
     # get length of combined csv
     kw_list_length = len(combined_csv)
     return kw_list_length

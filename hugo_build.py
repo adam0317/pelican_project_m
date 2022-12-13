@@ -65,14 +65,22 @@ def build_sites():  # sourcery no-metrics
 
         kw_list_exists = False
 
-        for i in site['Keyword Lists']:
-            kw_list_exists = os.path.exists(f'{os.getcwd()}/kw_lists/{i}.csv')
-            if kw_list_exists:
-                num_keywords = sum(1 for line in open(f'{os.getcwd()}/kw_lists/{i}.csv'))
-                break
+        article_forge_keyword = site.get('article_forge_keyword')
+        if not article_forge_keyword:
+            logger.info(f"No Article Forge Keyword Found For {record['id']}")
+            update_record(record['id'], {'Status': 'Error', 'Error Message':'No Article Forge Keyword Found'})
+            continue
+        article_forge_keyword_file_name = article_forge_keyword.replace(' ', '_').lower()
+        kw_list = site['Keyword Lists'][0].replace(' ', '_').lower()
+        
+        kw_list_exists = os.path.exists(f'{os.getcwd()}/kw_lists/{kw_list}.csv')
+
+        if kw_list_exists:
+            num_keywords = sum(1 for line in open(f'{os.getcwd()}/kw_lists/{kw_list}.csv'))
+
         if not kw_list_exists:
-            num_keywords = combine_and_clean_kw_list(site)
-        kw_list_path = f"{os.getcwd()}/kw_lists/{site['Keyword Lists'][0]}.csv"
+            num_keywords = combine_and_clean_kw_list(site, kw_list)
+        kw_list_path = f"{os.getcwd()}/kw_lists/{kw_list}.csv"
         update_record(record['id'], {'num_keywords': num_keywords})
         if 'Test' not in site['Status']:
             logging.debug(f"Starting Full Build {site['Bucket Name']}")
@@ -83,10 +91,7 @@ def build_sites():  # sourcery no-metrics
 
         # Create a new article and directory for the article
         # Check article forge for article
-        article_forge_keyword = site.get('article_forge_keyword')
-        if not article_forge_keyword:
-            logger.info(f'No Article Forge Keyword Found For {site}')
-        article_forge_keyword_file_name = article_forge_keyword.replace(' ', '_').lower()
+        
         article_path = f"{os.getcwd()}/articles/{article_forge_keyword_file_name}.txt"
         article_exists = os.path.exists(article_path)
         if not article_exists:
@@ -121,7 +126,8 @@ def build_sites():  # sourcery no-metrics
         build_dir = create_hugo_directory(domain)
 
         create_hugo_config(domain, build_dir, site['offer_link'][0])
-
+        print(f"The spun article dir is {spun_article_dir}")
+        print(f"The kw list path is {kw_list_path}")
         if 'Test' not in site['Status']:
             num_posts = '-1'
             process = Popen(
@@ -268,19 +274,17 @@ def deploy_sites():
 if __name__ == "__main__":
     if not os.path.exists(STAGING_PATH):
         os.makedirs(STAGING_PATH)
-    handle_dns()
-    build_sites()
-    deploy_sites()
-    # build_step = input(
-    #     'Choose a build step: \n1. dns\n2. build sites\n3. deploy_sites\n4. full run\n')
 
-    # if build_step == str(1):
-    #     handle_dns()
-    # if build_step == str(2):
-    #     build_sites()
-    # if build_step == str(3):
-    #     deploy_sites()
-    # if build_step == str(4):
-    #     handle_dns()
-    #     build_sites()
-    #     deploy_sites()
+    build_step = input(
+        'Choose a build step: \n1. dns\n2. build sites\n3. deploy_sites\n4. full run\n')
+
+    if build_step == str(1):
+        handle_dns()
+    if build_step == str(2):
+        build_sites()
+    if build_step == str(3):
+        deploy_sites()
+    if build_step == str(4):
+        handle_dns()
+        build_sites()
+        deploy_sites()
