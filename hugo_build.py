@@ -1,7 +1,6 @@
 import sys
 import logging
 import os
-import requests
 import boto3
 import json
 import ssl
@@ -10,8 +9,9 @@ from time import sleep
 from dotenv import load_dotenv
 from datetime import datetime
 from air_table import add_new_record, get_ready_to_build_records, get_ready_to_deploy_records, get_records_to_add_to_cloudflare, search_table,  update_record
-from article_forge import get_article_status, get_finished_article, initiate_article, wait_for_article
+from article_forge import initiate_article, wait_for_article
 from cloudflare import add_site_to_cloudflare, add_dns_to_cloudflare, add_page_rule, get_name_servers
+from spin_articles import spin_articles
 from spin_rw import spin_article
 from utils import combine_and_clean_kw_list, create_hugo_config, create_hugo_directory
 ssl._create_default_https_context = ssl._create_unverified_context
@@ -28,7 +28,6 @@ stdout_handler.setFormatter(formatter)
 file_handler = logging.FileHandler('logs.log')
 file_handler.setLevel(logging.DEBUG)
 file_handler.setFormatter(formatter)
-
 
 logger.addHandler(file_handler)
 logger.addHandler(stdout_handler)
@@ -126,21 +125,14 @@ def build_sites():  # sourcery no-metrics
         build_dir = create_hugo_directory(domain)
 
         create_hugo_config(domain, build_dir, site['offer_link'][0])
-        print(f"The spun article dir is {spun_article_dir}")
-        print(f"The kw list path is {kw_list_path}")
+
+
         if 'Test' not in site['Status']:
             num_posts = '-1'
-            process = Popen(
-                f"php spintax.php {kw_list_path} {spun_article_dir} {build_dir}/content/posts {num_posts} {start_date}", shell=True, stdout=PIPE, stderr=STDOUT)
-            while process.poll() is None:
-                check_io(process)
-
         else:
             num_posts = '5'
-            process = Popen(
-                f"php spintax.php {kw_list_path} {spun_article_dir} {build_dir}/content/posts {num_posts} {start_date}", shell=True, stdout=PIPE, stderr=STDOUT)
-            while process.poll() is None:
-                check_io(process)
+            
+        spin_articles(kw_list_path, spun_article_dir, build_dir, num_posts, start_date)
 
         process = Popen(
             f"./hugo_build.sh {domain} {STAGING_PATH} {build_dir}", shell=True)
@@ -149,7 +141,6 @@ def build_sites():  # sourcery no-metrics
 
         if 'Test' not in site['Status']:
             logging.info(f"Finished Full Build {site['Bucket Name']}")
-
             update_record(record['id'], {'Status': 'Ready To Deploy'})
         else:
             logging.info(f"Finished Test Build {site['Bucket Name']}")
